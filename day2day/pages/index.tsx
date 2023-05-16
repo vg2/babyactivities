@@ -10,70 +10,50 @@ import {
 } from "@mui/material";
 import useSchedules from "../api/useSchedules";
 import useScheduledActivities from "../api/useScheduledActivities";
+import ScheduleSelect from "../modules/today/components/schedule-select";
+import { TodaySummary } from "../modules/today/components/today-summary";
+import { Schedule } from "../common/data-models/schedule";
+import ActivityList from "../modules/today/components/activity-list";
 
 export default function Home() {
-  const [selectedSchedule, setSelectedSchedule] = useState<number>();
+  const [selectedScheduleId, setSelectedSchedule] = useState<number>();
   const { data: schedules, isLoading: schedulesLoading } = useSchedules();
-  const { data: scheduledActivities, isLoading: scheduledActivitiesLoading } =
-    useScheduledActivities(selectedSchedule);
+  const { data: scheduledActivities, isLoading: scheduledActivitiesLoading } = useScheduledActivities(selectedScheduleId);
 
-  if (!schedulesLoading && !selectedSchedule) {
+  let selectedSchedule: Schedule;
+
+  if (!schedulesLoading && !selectedScheduleId) {
     setSelectedSchedule(schedules[0].id);
   }
 
-  const handleChange = (e) => {
-    setSelectedSchedule(e.target.value);
+  const handleScheduleChange = (scheduleId: number) => {
+    setSelectedSchedule(scheduleId);
   };
+
+  if (selectedScheduleId > 0) {
+    selectedSchedule = schedules.find(schedule => schedule.id === selectedScheduleId);
+  }
+
+  const showSummary = !!(selectedSchedule &&  scheduledActivities);
+  const showActivities = !!scheduledActivities?.activities;
 
   return (
     <Layout>
-      <h1>Schedules</h1>
+      <h1>Today's schedule</h1>
       <section>
         {!schedulesLoading && (
-          <FormControl fullWidth>
-            <InputLabel id="schedules-dropdown">Schedules</InputLabel>
-            <Select
-              labelId="schedules-dropdown-label"
-              id="schedules-dropdown-select"
-              value={selectedSchedule}
-              label="Age"
-              onChange={handleChange}
-            >
-              {schedules.map((schedule) => (
-                <MenuItem key={schedule.id} value={schedule.id}>
-                  {schedule.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <ScheduleSelect schedules={schedules} handleOnChange={handleScheduleChange}/>
         )}
       </section>
       <section>
-        {!schedulesLoading &&
-          selectedSchedule &&
-          !scheduledActivitiesLoading &&
-          scheduledActivities && (
-            <h2>
-              Todays Activities (Day {scheduledActivities.day} /{" "}
-              {schedules.find((s) => s.id === selectedSchedule)?.days})
-            </h2>
+        {showSummary && (
+            <TodaySummary schedule={selectedSchedule} scheduledActivities={scheduledActivities}/>
           )}
       </section>
       <section>
-        {!scheduledActivitiesLoading &&
-          scheduledActivities?.activities &&
-          scheduledActivities.activities.map((activity) => (
-            <>
-            <Card key={activity.id}>
-              <CardContent>
-                <h5>{activity.name}</h5>
-                <p>{activity.description}</p>
-                <p>Notes: {activity.dayNotes}</p>
-              </CardContent>
-            </Card>
-            <br/>
-            </>
-          ))}
+        {showActivities && (
+            <ActivityList activities={scheduledActivities.activities} />
+          )}
       </section>
     </Layout>
   );
